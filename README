@@ -1,0 +1,33 @@
+Arrow Watch
+Pat Hickey, May 2011
+
+Based on 'teatime' by Trammell Hudson.
+https://bitbucket.org/hudson/watches/
+
+QUICK DEMO VIDEO
+
+http://www.youtube.com/watch?v=QXeMZkkN2Qs
+
+SUMMARY
+
+Shows a simple 3D wireframe rendering of an arrow.
+The camera rotation matrix is provided over the debug
+serial port from an InvenSense IMU-3000 sensor board
+running the Embedded MotionApps (Embedded MPL / "umpl")
+software.
+
+Button presses will cycle through four camera
+prespectives. The first prespective is updated with data
+from the serial port, the others are fixed orientations.
+(This is not useful except to test the drawing code.)
+
+I/O is found in umpl_interface.c
+Arrow verticies and edges are found in arrow.h
+main_app_loop found in arrowwatch.c
+ 
+BUILDING
+
+You'll need the inPulse SDK (http://getinpulse.com).
+Setup environment variables for your SDK, ARM toolchain,
+and python installation in the Makefile.rules file.
+

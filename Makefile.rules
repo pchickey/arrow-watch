@@ -1,0 +1,108 @@
+# Allerta Inc Pulse Build System
+# Copyright 2011
+
+SHELL		= /bin/sh
+
+#MAC		= 00:50:c2:79:ee:55
+#MAC		= 00:50:c2:79:ef:08
+MAC		= 00:50:c2:79:ee:c3 // pch dev watch
+
+PULSE_DIR	= $(HOME)/src/sdkpulse
+LIBDIR		= $(PULSE_DIR)/lib
+OBJDIR		= $(PULSE_DIR)/lib/obj
+TOOLSDIR	= $(PULSE_DIR)/tools
+INCDIR		= ./include
+
+PULSE_INCDIR	= $(PULSE_DIR)/include
+PULSE_LIBS	= $(wildcard $(LIBDIR)/*.a)
+PULSE_OBJS	= $(wildcard $(OBJDIR)/*.o)
+
+ARMDIR = $(HOME)/bin/arm-gcc/bin
+CC		= $(ARMDIR)/arm-none-eabi-gcc
+OBJCOPY		= $(ARMDIR)/arm-none-eabi-objcopy
+PYTHON		= python2.6
+CS		= $(PYTHON) $(TOOLSDIR)/fw_checksummer/checksummer.py
+
+
+OBJCOPY_FLAGS = -O ihex
+
+CFLAGS = \
+	-I$(INCDIR) \
+	-I$(PULSE_INCDIR) \
+	-std=gnu99 \
+	-g \
+	-Os \
+	-Wall \
+	-Wno-format \
+	-fno-builtin \
+	-mcpu=arm7tdmi-s \
+	-march=armv4t \
+	-mthumb \
+	-mthumb-interwork \
+	-ffunction-sections \
+	-fdata-sections \
+	-DNDEBUG \
+	-Wno-unused-parameter \
+
+all: pulse_app.bin
+install: pulse_app.bin
+
+include/app_resources.h: resources/fonts.txt
+	$(PYTHON) $(TOOLSDIR)/resource_packer/resource_packer.py
+
+
+pulse_app: $(SRCS) include/app_resources.h
+	$(CC) \
+		-o $@ \
+		$(SRCS) \
+		$(CFLAGS) \
+		-T$(OBJDIR)/firmware.ld \
+		-Wl,--cref \
+		-Wl,--gc-sections \
+		-Wl,-Map=pulse_app.map \
+		-Wl,-\( \
+			$(PULSE_LIBS) \
+			$(PULSE_OBJS) \
+			-lgcc \
+		-Wl,-\) \
+
+%.hex: %
+	$(OBJCOPY) $(OBJCOPY_FLAGS) $< $@
+
+%.bin: %.hex
+	$(CS) $< $@
+
+.PHONY: clean
+
+clean:
+	$(RM) \
+		*.o \
+		*.bin \
+		*.hex \
+		pulse_app* \
+		include/app_resources.h \
+		resources/inpulse_resources.bin \
+
+server:
+	cd $(PULSE_DIR); \
+	java -d32 -jar ./tools/L2CAPServer/L2CAPServer.jar
+
+install: pulse_app.bin
+	$(PYTHON) $(PULSE_DIR)/compileandload.py \
+		-d $(MAC) \
+		-l $< \
+
+install-resources: resources/inpulse_resources.bin
+	$(PYTHON) $(PULSE_DIR)/compileandload.py \
+		-d $(MAC) \
+		-r \
+		-f $< \
+	
+	
+install-both: resources/inpulse_resources.bin pulse_app.bin
+	$(PYTHON) $(PULSE_DIR)/compileandload.py \
+		-d $(MAC) \
+		-r \
+		-l pulse_app.bin \
+		-f resources/inpulse_resources.bin \
+
